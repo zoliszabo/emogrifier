@@ -392,7 +392,7 @@ class Emogrifier
                 }
                 $node->setAttribute(
                     'style',
-                    $this->generateStyleStringFromDeclarationsArrays($oldStyleDeclarations, $newStyleDeclarations)
+                    $this->generateStyleStringFromDeclarationsArrays($newStyleDeclarations, $oldStyleDeclarations)
                 );
             }
         }
