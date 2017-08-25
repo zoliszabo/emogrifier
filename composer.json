@@ -1,5 +1,5 @@
 {
-    "name": "pelago/emogrifier",
+    "name": "zoliszabo/emogrifier",
     "description": "Converts CSS styles into inline style attributes in your HTML code",
     "tags": ["email", "css", "pre-processing"],
     "license": "MIT",
@@ -22,6 +22,9 @@
         {
             "name": "Roman Ožana",
             "email": "ozana@omdesign.cz"
+        },
+        {
+            "name": "Zoli Szabó"
         }
     ],
     "require": {
