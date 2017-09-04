@@ -394,13 +394,15 @@ class Emogrifier
                     $oldStyleDeclarations = [];
                 }
                 $newStyleDeclarations = $this->parseCssDeclarationsBlock($cssRule['declarationsBlock']);
-                if ($this->shouldMapCssToHtml) {
-                    $this->mapCssToHtmlAttributes($newStyleDeclarations, $node);
-                }
+                $mergedStyleDeclarationsString = $this->generateStyleStringFromDeclarationsArrays($newStyleDeclarations, $oldStyleDeclarations);
                 $node->setAttribute(
                     'style',
-                    $this->generateStyleStringFromDeclarationsArrays($oldStyleDeclarations, $newStyleDeclarations)
+                    $mergedStyleDeclarationsString
                 );
+                if ($this->shouldMapCssToHtml) {
+                    $mergedStyleDeclarations = $this->parseCssDeclarationsBlock($mergedStyleDeclarationsString);
+                    $this->mapCssToHtmlAttributes($mergedStyleDeclarations, $node);
+                }
             }
         }
 
