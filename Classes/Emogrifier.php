@@ -348,9 +348,8 @@ class Emogrifier
             foreach ($nodesWithStyleAttributes as $node) {
                 if ($this->isInlineStyleAttributesParsingEnabled) {
                     $this->normalizeStyleAttributes($node);
-                } else {
-                    $node->removeAttribute('style');
                 }
+                $node->removeAttribute('style');
             }
         }
 
@@ -387,7 +386,7 @@ class Emogrifier
                     $oldStyleDeclarations = [];
                 }
                 $newStyleDeclarations = $this->parseCssDeclarationsBlock($cssRule['declarationsBlock']);
-                $mergedStyleDeclarationsString = $this->generateStyleStringFromDeclarationsArrays($newStyleDeclarations, $oldStyleDeclarations);
+                $mergedStyleDeclarationsString = $this->generateStyleStringFromDeclarationsArrays($oldStyleDeclarations, $newStyleDeclarations);
                 $node->setAttribute(
                     'style',
                     $mergedStyleDeclarationsString
