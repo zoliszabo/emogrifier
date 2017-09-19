@@ -854,13 +854,13 @@ class Emogrifier
         foreach ($this->styleAttributesForNodes as $nodePath => $styleAttributesForNode) {
             $node = $this->visitedNodes[$nodePath];
             $currentStyleAttributes = $this->parseCssDeclarationsBlock($node->getAttribute('style'));
-            $node->setAttribute(
-                'style',
-                $this->generateStyleStringFromDeclarationsArrays(
-                    $currentStyleAttributes,
-                    $styleAttributesForNode
-                )
+            $mergedStyleDeclarationsString = $this->generateStyleStringFromDeclarationsArrays(
+                $currentStyleAttributes,
+                $styleAttributesForNode
             );
+            $node->setAttribute('style', $mergedStyleDeclarationsString);
+            $mergedStyleDeclarations = $this->parseCssDeclarationsBlock($mergedStyleDeclarationsString);
+            $this->mapCssToHtmlAttributes($mergedStyleDeclarations, $node);
         }
     }
 
