@@ -391,10 +391,6 @@ class Emogrifier
                     'style',
                     $mergedStyleDeclarationsString
                 );
-                if ($this->shouldMapCssToHtml) {
-                    $mergedStyleDeclarations = $this->parseCssDeclarationsBlock($mergedStyleDeclarationsString);
-                    $this->mapCssToHtmlAttributes($mergedStyleDeclarations, $node);
-                }
             }
         }
 
@@ -402,6 +398,17 @@ class Emogrifier
 
         if ($this->isInlineStyleAttributesParsingEnabled) {
             $this->fillStyleAttributesWithMergedStyles();
+        }
+
+        if ($this->shouldMapCssToHtml) {
+            $nodesWithStyleAttributes = $xPath->query('//*[@style]');
+            if ($nodesWithStyleAttributes !== false) {
+                /** @var \DOMElement $node */
+                foreach ($nodesWithStyleAttributes as $node) {
+                    $inlineStyleDeclarations = $this->parseCssDeclarationsBlock($node->getAttribute('style'));
+                    $this->mapCssToHtmlAttributes($inlineStyleDeclarations, $node);
+                }
+            }
         }
 
         if ($this->shouldKeepInvisibleNodes) {
@@ -859,8 +866,6 @@ class Emogrifier
                 $styleAttributesForNode
             );
             $node->setAttribute('style', $mergedStyleDeclarationsString);
-            $mergedStyleDeclarations = $this->parseCssDeclarationsBlock($mergedStyleDeclarationsString);
-            $this->mapCssToHtmlAttributes($mergedStyleDeclarations, $node);
         }
     }
 
