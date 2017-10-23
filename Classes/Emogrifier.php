@@ -156,6 +156,12 @@ class Emogrifier
     private $shouldKeepInvisibleNodes = true;
 
     /**
+     * List of property names that should not be normalized.
+     * @var type
+     */
+    private $cssPropertyNameNormalizationExceptionList = [];
+
+    /**
      * @var string[]
      */
     private $xPathRules = [
@@ -346,20 +352,17 @@ class Emogrifier
         $xPath = new \DOMXPath($xmlDocument);
         $this->clearAllCaches();
 
-        // Before be begin processing the CSS file, parse the document and normalize all existing CSS attributes.
-        // This changes 'DISPLAY: none' to 'display: none'.
-        // We wouldn't have to do this if DOMXPath supported XPath 2.0.
-        // Also store a reference of nodes with existing inline styles so we don't overwrite them.
-        $this->purgeVisitedNodes();
-
         set_error_handler([$this, 'handleXpathError'], E_WARNING);
 
+        // Save original inline style declarations for later (if isInlineStyleAttributesParsingEnabled),
+        // then remove all original inline style attributes
+        $this->purgeVisitedNodes();
         $nodesWithStyleAttributes = $xPath->query('//*[@style]');
         if ($nodesWithStyleAttributes !== false) {
             /** @var \DOMElement $node */
             foreach ($nodesWithStyleAttributes as $node) {
                 if ($this->isInlineStyleAttributesParsingEnabled) {
-                    $this->normalizeStyleAttributes($node);
+                    $this->saveOriginalInlineStyleForLaterUse($node);
                 }
                 // Remove style attribute in every case, so we can add them back (if inline style attributes
                 // parsing is enabled) to the end of the style list, thus keeping the right priority of CSS rules;
@@ -705,6 +708,77 @@ class Emogrifier
     }
 
     /**
+     * Adds new property name(s) to the property name normalization exception list.
+     *
+     * @param string[]|string $propertyNames
+     *
+     * @return void
+     */
+    public function addCssPropertyNameNormalizationExceptions($propertyNames)
+    {
+        if (is_string($propertyNames)) {
+            $propertyNames = [$propertyNames];
+        } elseif (!is_array($propertyNames)) {
+            if ($this->debug) {
+                throw new \InvalidArgumentException(
+                    'The method ' . __METHOD__ . ' accepts a string or an array of strings as its single argument.',
+                    1508685122
+                );
+            }
+        }
+        $this->cssPropertyNameNormalizationExceptionList = array_unique(
+            array_merge($this->cssPropertyNameNormalizationExceptionList, $propertyNames)
+        );
+    }
+
+    /**
+     * Removes property name(s) from the property name normalization exception list.
+     *
+     * @param string[]|string $propertyNames
+     *
+     * @return void
+     */
+    public function removeCssPropertyNameNormalizationExceptions($propertyNames)
+    {
+        if (is_string($propertyNames)) {
+            $propertyNames = [$propertyNames];
+        } elseif (!is_array($propertyNames)) {
+            if ($this->debug) {
+                throw new \InvalidArgumentException(
+                    'The method ' . __METHOD__ . ' accepts a string or an array of strings as its single argument.',
+                    1508685122
+                );
+            }
+        }
+        $this->cssPropertyNameNormalizationExceptionList = array_diff(
+            $this->cssPropertyNameNormalizationExceptionList,
+            $propertyNames
+        );
+    }
+
+    /**
+     * Sets the property name normalization exception list.
+     *
+     * @param string[]|string $propertyNames
+     *
+     * @return void
+     */
+    public function setCssPropertyNameNormalizationExceptionList($propertyNames)
+    {
+        if (is_string($propertyNames)) {
+            $propertyNames = [$propertyNames];
+        } elseif (!is_array($propertyNames)) {
+            if ($this->debug) {
+                throw new \InvalidArgumentException(
+                    'The method ' . __METHOD__ . ' accepts a string or an array of strings as its single argument.',
+                    1508685122
+                );
+            }
+        }
+        $this->cssPropertyNameNormalizationExceptionList = $propertyNames;
+    }
+
+    /**
      * Clears all caches.
      *
      * @return void
@@ -872,31 +946,22 @@ class Emogrifier
     }
 
     /**
-     * Normalizes the value of the "style" attribute and saves it.
+     * Saves original inline style of a node for later use (for re-applying original inline style declarations
+     * after all CSS blocks were applied).
      *
      * @param \DOMElement $node
      *
      * @return void
      */
-    private function normalizeStyleAttributes(\DOMElement $node)
+    private function saveOriginalInlineStyleForLaterUse(\DOMElement $node)
     {
-        $normalizedOriginalStyle = preg_replace_callback(
-            '/[A-z\\-]+(?=\\:)/S',
-            function (array $m) {
-                return strtolower($m[0]);
-            },
-            $node->getAttribute('style')
-        );
-
         // in order to not overwrite existing style attributes in the HTML, we
         // have to save the original HTML styles
         $nodePath = $node->getNodePath();
         if (!isset($this->styleAttributesForNodes[$nodePath])) {
-            $this->styleAttributesForNodes[$nodePath] = $this->parseCssDeclarationsBlock($normalizedOriginalStyle);
+            $this->styleAttributesForNodes[$nodePath] = $this->parseCssDeclarationsBlock($node->getAttribute('style'));
             $this->visitedNodes[$nodePath] = $node;
         }
-
-        $node->setAttribute('style', $normalizedOriginalStyle);
     }
 
     /**
@@ -953,7 +1018,7 @@ class Emogrifier
 
         $style = '';
         foreach ($combinedStyles as $attributeName => $attributeValue) {
-            $style .= strtolower(trim($attributeName)) . ': ' . trim($attributeValue) . '; ';
+            $style .= $this->normalizeCssPropertyName(trim($attributeName)) . ': ' . trim($attributeValue) . '; ';
         }
         $trimmedStyle = rtrim($style);
 
@@ -1616,13 +1681,24 @@ class Emogrifier
                 continue;
             }
 
-            $propertyName = strtolower($matches[1]);
+            $propertyName = $this->normalizeCssPropertyName($matches[1]);
             $propertyValue = $matches[2];
             $properties[$propertyName] = $propertyValue;
         }
         $this->caches[self::CACHE_KEY_CSS_DECLARATIONS_BLOCK][$cssDeclarationsBlock] = $properties;
 
         return $properties;
+    }
+
+    /**
+     * Normalizes a CSS property name.
+     *
+     * @param string $propertyName
+     *
+     * @return string
+     */
+    private function normalizeCssPropertyName($propertyName) {
+        return strtolower($propertyName);
     }
 
     /**
