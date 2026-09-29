@@ -1699,7 +1699,7 @@ class Emogrifier
         }
 
         $hasNotSelector = (bool)\preg_match(
-            '/^([^:]+):not\\(\\s*([[:ascii:]]+)\\s*\\)$/',
+            '/^([^:]+):not\\(\\s*([[:ascii:]]+)\\s*\\)(.*)$/',
             $trimmedLowercaseSelector,
             $matches
         );
@@ -1707,9 +1707,14 @@ class Emogrifier
             $xPath = '//' . $this->translateCssToXpathPass($trimmedLowercaseSelector);
         } else {
             /** @var string[] $matches */
-            list(, $partBeforeNot, $notContents) = $matches;
-            $xPath = '//' . $this->translateCssToXpathPass($partBeforeNot) .
-                '[not(' . $this->translateCssToXpathPassInline($notContents) . ')]';
+            list(, $partBeforeNot, $notContents, $partAfterNot) = $matches;
+            $notCondition = '[not(' . $this->translateCssToXpathPassInline($notContents) . ')]';
+            if ($partAfterNot === '' || \preg_match('/^(?:\\s|[>+])/', $partAfterNot)) {
+                $xPath = '//' . $this->translateCssToXpathPass($partBeforeNot) . $notCondition .
+                    $this->translateCssToXpathPass($partAfterNot);
+            } else {
+                $xPath = '//' . $this->translateCssToXpathPass($partBeforeNot . $partAfterNot) . $notCondition;
+            }
         }
         $this->caches[static::CACHE_KEY_SELECTOR][$xPathKey] = $xPath;
 

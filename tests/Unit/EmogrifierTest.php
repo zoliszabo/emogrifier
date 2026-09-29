@@ -734,6 +734,27 @@ class EmogrifierTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @test
+     */
+    public function emogrifyAppliesCssWithDescendantAfterNotPseudoClass()
+    {
+        $this->subject->setHtml(
+            '<html><body>' .
+            '<div class="a"><div class="c">match</div></div>' .
+            '<div class="a b"><div class="c">no match</div></div>' .
+            '</body></html>'
+        );
+        $this->subject->setCss(
+            '.a:not(.b) .c { color: red; }'
+        );
+
+        $result = $this->subject->emogrify();
+
+        self::assertContains('<div class="c" style="color: red;">match</div>', $result);
+        self::assertContains('<div class="c">no match</div>', $result);
+    }
+
+    /**
      * @return string[][]
      */
     public function nonMatchedCssDataProvider()
